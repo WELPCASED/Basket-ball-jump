@@ -1,0 +1,80 @@
+-- Create ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "JumpGui"
+screenGui.Parent = game.CoreGui
+
+-- Create the Jump Button
+local jumpButton = Instance.new("TextButton")
+jumpButton.Size = UDim2.new(0, 100, 0, 50) -- Small size
+jumpButton.Position = UDim2.new(0.5, -50, 0.5, -25) -- Centered on screen
+jumpButton.Text = "Jump"
+jumpButton.Parent = screenGui
+
+-- Variables for dragging
+local dragging = false
+local dragStart
+local startPos
+
+-- Function to make the player jump
+local function makePlayerJump()
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+
+    if humanoid and rootPart then
+        -- Ensure we have a safe jump power and avoid using extreme values
+        humanoid.JumpPower = 50
+        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+
+        -- Adjust jump power to ensure it's within game limits
+        if humanoid.JumpPower > 100 then
+            humanoid.JumpPower = 100
+        end
+
+        -- Anti-Teleport Strategy
+        -- Smoothly adjust position to minimize teleportation detection
+        local function smoothPositionAdjustment()
+            local initialCFrame = rootPart.CFrame
+            local targetCFrame = initialCFrame + Vector3.new(0, 50, 0) -- Move upwards
+            local startTime = tick()
+            local duration = 0.2
+
+            while tick() - startTime < duration do
+                local alpha = (tick() - startTime) / duration
+                rootPart.CFrame = initialCFrame:Lerp(targetCFrame, alpha)
+                wait() -- Use `wait` to yield execution and reduce server load
+            end
+            rootPart.CFrame = targetCFrame -- Ensure the final position is set
+        end
+
+        -- Call the smooth position adjustment function
+        smoothPositionAdjustment()
+    end
+end
+
+-- Dragging logic
+jumpButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = jumpButton.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+jumpButton.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.Touch then
+        local delta = input.Position - dragStart
+        jumpButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- Button Click and Touch Event
+jumpButton.MouseButton1Click:Connect(makePlayerJump)
+jumpButton.TouchTap:Connect(makePlayerJump)
