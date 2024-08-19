@@ -23,33 +23,27 @@ local function makePlayerJump()
     local rootPart = character:FindFirstChild("HumanoidRootPart")
 
     if humanoid and rootPart then
-        -- Ensure we have a safe jump power and avoid using extreme values
-        humanoid.JumpPower = 50
+        -- Set a conservative jump power and height
+        humanoid.JumpPower = 50 -- Adjust as needed to be within game limits
+
+        -- Apply a normal jump
         humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        humanoid.Jump = true
 
-        -- Adjust jump power to ensure it's within game limits
-        if humanoid.JumpPower > 100 then
-            humanoid.JumpPower = 100
-        end
+        -- Ensure height is not exceeded
+        local maxHeight = 20 -- Adjust this to a reasonable limit
 
-        -- Anti-Teleport Strategy
-        -- Smoothly adjust position to minimize teleportation detection
-        local function smoothPositionAdjustment()
-            local initialCFrame = rootPart.CFrame
-            local targetCFrame = initialCFrame + Vector3.new(0, 50, 0) -- Move upwards
-            local startTime = tick()
-            local duration = 0.2
-
-            while tick() - startTime < duration do
-                local alpha = (tick() - startTime) / duration
-                rootPart.CFrame = initialCFrame:Lerp(targetCFrame, alpha)
-                wait() -- Use `wait` to yield execution and reduce server load
+        local function monitorHeight()
+            local originalPosition = rootPart.Position
+            while wait(0.1) do
+                if rootPart.Position.Y > (originalPosition.Y + maxHeight) then
+                    rootPart.CFrame = CFrame.new(rootPart.Position.X, originalPosition.Y + maxHeight, rootPart.Position.Z)
+                end
             end
-            rootPart.CFrame = targetCFrame -- Ensure the final position is set
         end
 
-        -- Call the smooth position adjustment function
-        smoothPositionAdjustment()
+        -- Start monitoring in a separate coroutine
+        coroutine.wrap(monitorHeight)()
     end
 end
 
